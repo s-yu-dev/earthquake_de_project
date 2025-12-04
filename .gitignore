@@ -1,14 +1,32 @@
-# Python
+# --- Python ---
 __pycache__/
 *.py[cod]
+*$py.class
 .venv/
 .env
 
-# Airflow logs
-logs/
+# --- Distribution / Build ---
+dist/
+build/
+*.egg-info/
 
-# IDE settings
+# --- Testing & Quality ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Airflow ---
+logs/
+*.pid
+airflow-webserver.pid
+
+# --- IDE ---
 .idea/
 .vscode/
-
 *.swp
+
+# --- OS ---
+.DS_Store
+Thumbs.db

@@ -11,7 +11,7 @@ dependencies = [
     "apache-airflow==2.10.3",
     "duckdb>=1.0.0",
     "pendulum>=3.0.0",
-    "s3fs", 
+    "s3fs",
     "psycopg2-binary>=2.9.0"
 ]
 
@@ -19,8 +19,25 @@ dependencies = [
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.6.0"
+pre-commit = "^3.6.0"
+pytest = "^8.0.0"
+
 [tool.poetry]
 package-mode = false
 
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.6.0"
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = []
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "double"
