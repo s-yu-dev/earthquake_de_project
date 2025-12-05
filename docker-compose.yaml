@@ -6,7 +6,7 @@ x-airflow-common:
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_AIRFLOW_USER}:${POSTGRES_AIRFLOW_PASSWORD}@airflow-postgres:5432/${POSTGRES_AIRFLOW_DB}
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
@@ -23,30 +23,34 @@ x-airflow-common:
 
 services:
   airflow-postgres:
-    image: postgres:13
+    image: postgres:16
     environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
+      POSTGRES_USER: ${POSTGRES_AIRFLOW_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_AIRFLOW_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_AIRFLOW_DB}
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
+    networks:
+      - earthquake_net
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "airflow"]
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_AIRFLOW_USER}"]
       interval: 5s
       retries: 5
-    restart: always
+    restart: unless-stopped
 
   airflow-webserver:
     <<: *airflow-common
     command: webserver
     ports:
       - "8080:8080"
+    networks:
+      - earthquake_net
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 5
-    restart: always
+    restart: unless-stopped
     depends_on:
       <<: *airflow-common-depends-on
       airflow-init:
@@ -55,7 +59,9 @@ services:
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
-    restart: always
+    networks:
+      - earthquake_net
+    restart: unless-stopped
     depends_on:
       <<: *airflow-common-depends-on
       airflow-init:
@@ -70,44 +76,59 @@ services:
       _AIRFLOW_WWW_USER_CREATE: 'true'
       _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
       _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
+    networks:
+      - earthquake_net
 
   postgres-dwh:
-    image: postgres:13
+    image: postgres:16
     environment:
-      POSTGRES_USER: user_dwh
-      POSTGRES_PASSWORD: password_dwh
-      POSTGRES_DB: dwh
+      POSTGRES_USER: ${POSTGRES_DWH_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_DWH_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DWH_DB}
     ports:
       - "5433:5432"
     volumes:
       - dwh-db-volume:/var/lib/postgresql/data
-    restart: always
+    networks:
+      - earthquake_net
+    restart: unless-stopped
 
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minio_admin
-      MINIO_ROOT_PASSWORD: minio_password
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     ports:
       - "9000:9000"
       - "9001:9001"
     volumes:
       - minio-volume:/data
-    restart: always
+    networks:
+      - earthquake_net
+    restart: unless-stopped
 
   metabase:
-    image: metabase/metabase:latest
+    image: metabase/metabase:v0.57.5.x
     ports:
       - "3000:3000"
     environment:
       MB_DB_FILE: /metabase.db
     volumes:
       - metabase-data:/metabase-data
-    restart: always
+    networks:
+      - earthquake_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
 volumes:
   postgres-db-volume:
   dwh-db-volume:
   minio-volume:
   metabase-data:
+
+networks:
+  earthquake_net:
