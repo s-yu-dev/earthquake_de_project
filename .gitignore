@@ -30,3 +30,6 @@ airflow-webserver.pid
 # --- OS ---
 .DS_Store
 Thumbs.db
+
+# --- Utility ---
+scripts/
